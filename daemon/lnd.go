@@ -726,8 +726,10 @@ func genCertPair(certFile, keyFile string) error {
 	// Collect the host's names into a slice.
 	host, err := os.Hostname()
 	if err != nil {
-		return err
+		rpcsLog.Errorf("failed getting hostname: %v", err)
+		host = "localhost"
 	}
+
 	dnsNames := []string{host}
 	if host != "localhost" {
 		dnsNames = append(dnsNames, "localhost")

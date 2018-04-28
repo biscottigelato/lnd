@@ -215,7 +215,8 @@ type config struct {
 // 	2) Pre-parse the command line to check for an alternative config file
 // 	3) Load configuration file overwriting defaults with any specified options
 // 	4) Parse CLI options and overwrite/add any specified options
-func loadConfig() (*config, error) {
+func loadConfig(appDir string) (*config, error) {
+
 	defaultCfg := config{
 		LndDir:         defaultLndDir,
 		ConfigFile:     defaultConfigFile,
@@ -294,6 +295,9 @@ func loadConfig() (*config, error) {
 	// If the provided lnd directory is not the default, we'll modify the
 	// path to all of the files and directories that will live within it.
 	lndDir := cleanAndExpandPath(preCfg.LndDir)
+	if appDir != "" {
+		lndDir = cleanAndExpandPath(appDir)
+	}
 	if lndDir != defaultLndDir {
 		defaultCfg.ConfigFile = filepath.Join(lndDir, defaultConfigFilename)
 		defaultCfg.DataDir = filepath.Join(lndDir, defaultDataDirname)
@@ -327,7 +331,7 @@ func loadConfig() (*config, error) {
 	// Next, load any additional configuration options from the file.
 	var configFileError error
 	cfg := defaultCfg
-	configFile := cleanAndExpandPath(preCfg.ConfigFile)
+	configFile := cleanAndExpandPath(defaultCfg.ConfigFile)
 	if err := flags.IniParse(configFile, &cfg); err != nil {
 		configFileError = err
 	}

@@ -332,6 +332,7 @@
     "stats",
     "status",
     "tap",
+    "test/bufconn",
     "transport"
   ]
   revision = "b3ddf786825de56a4178401b7e174ee332173b66"
@@ -359,6 +360,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3e7512c1772a70c004d9557850137e4dd82545ec2e16381b4694ff4a0c5a6819"
+  inputs-digest = "9c7f0d0f01565f29f679a9e3dfdf468829453159b42a1f0fce1009104ce24c70"
   solver-name = "gps-cdcl"
   solver-version = 1

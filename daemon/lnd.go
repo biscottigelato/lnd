@@ -34,7 +34,6 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	proxy "github.com/grpc-ecosystem/grpc-gateway/runtime"
-	flags "github.com/jessevdk/go-flags"
 	"github.com/lightningnetwork/lnd/autopilot"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/keychain"
@@ -643,18 +642,6 @@ func lndMain() error {
 	<-shutdownChannel
 	ltndLog.Info("Shutdown complete")
 	return nil
-}
-
-func main() {
-	// Call the "real" main in a nested manner so the defers will properly
-	// be executed in the case of a graceful shutdown.
-	if err := lndMain(); err != nil {
-		if e, ok := err.(*flags.Error); ok && e.Type == flags.ErrHelp {
-		} else {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		os.Exit(1)
-	}
 }
 
 // fileExists reports whether the named file or directory exists.

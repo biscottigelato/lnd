@@ -127,10 +127,28 @@ func main() {
 					fmt.Println(err)
 					return
 				}
+			case !clientStream && serverStream:
+				p := onceParams{
+					MethodName:  m.GetName(),
+					RequestType: m.GetInputType()[1:],
+				}
+
+				if err := readStreamTemplate.Execute(wr, p); err != nil {
+					fmt.Println(err)
+					return
+				}
+			case clientStream && serverStream:
+				p := onceParams{
+					MethodName:  m.GetName(),
+					RequestType: m.GetInputType()[1:],
+				}
+
+				if err := biStreamTemplate.Execute(wr, p); err != nil {
+					fmt.Println(err)
+					return
+				}
 			}
-
 		}
-
 	}
 }
 
@@ -166,6 +184,62 @@ func {{.MethodName}}(msg []byte, callback Callback) {
 		},
 	}
 	s.start(msg, callback)
+}
+`))
+
+	readStreamTemplate = template.Must(template.New("once").Parse(`
+func {{.MethodName}}(msg []byte, callback Callback) {
+	s := &readStreamHandler{
+		newProto: func() proto.Message {
+			return &{{.RequestType}}{}
+		},
+		recvStream: func(ctx context.Context,
+			client lnrpc.LightningClient,
+			req proto.Message) (*receiver, error) {
+			r := req.(*{{.RequestType}})
+			stream, err := client.{{.MethodName}}(ctx, r)
+			if err != nil {
+				return nil, err
+			}
+			return &receiver{
+				recv: func() (proto.Message, error) {
+					return stream.Recv()
+				},
+			}, nil
+		},
+	}
+	s.start(msg, callback)
+}
+`))
+
+	biStreamTemplate = template.Must(template.New("once").Parse(`
+func {{.MethodName}}(callback Callback) (SendStream, error) {
+	b := &biStreamHandler{
+		newProto: func() proto.Message {
+			return &{{.RequestType}}{}
+		},
+		biStream: func(ctx context.Context,
+			client lnrpc.LightningClient) (*receiver, *sender,
+			error) {
+			stream, err := client.{{.MethodName}}(ctx)
+			if err != nil {
+				return nil, nil, err
+			}
+			return &receiver{
+					recv: func() (proto.Message, error) {
+						return stream.Recv()
+					},
+				},
+				&sender{
+					send: func(req proto.Message) error {
+						r := req.(*{{.RequestType}})
+						return stream.Send(r)
+					},
+					close: stream.CloseSend,
+				}, nil
+		},
+	}
+	return b.start(callback)
 }
 `))
 )

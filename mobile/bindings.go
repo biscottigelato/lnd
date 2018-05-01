@@ -11,6 +11,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc"
 )
 
+// TODO: move to build script.
 //go:generate go build gen_bindings.go
 //go:generate ./gen_bindings.sh
 //go:generate rm ./gen_bindings

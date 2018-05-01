@@ -11,6 +11,10 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc"
 )
 
+//go:generate go build gen_bindings.go
+//go:generate ./gen_bindings.sh
+//go:generate rm ./gen_bindings
+
 func Start(appDir string, callback Callback) {
 	// Call the "real" main in a nested manner so the defers will properly
 	// be executed in the case of a graceful shutdown.

@@ -9,7 +9,10 @@ import (
 	"os"
 	"text/template"
 
+	"strings"
+
 	"github.com/golang/glog"
+	"github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/grpc-ecosystem/grpc-gateway/codegenerator"
 	"github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway/descriptor"
 )
@@ -35,31 +38,6 @@ func main() {
 		return
 	}
 
-	reg.SetPrefix(*importPrefix)
-	reg.SetImportPath(*importPath)
-	reg.SetAllowDeleteBody(*allowDeleteBody)
-	if err := reg.Load(req); err != nil {
-		fmt.Println("err loading: ", err)
-		return
-	}
-
-	var targets []*descriptor.File
-	for _, target := range req.FileToGenerate {
-		f, err := reg.LookupFile(target)
-		if err != nil {
-			glog.Fatal(err)
-		}
-		targets = append(targets, f)
-	}
-
-	params := struct {
-		Name    string
-		Package string
-	}{
-		"rpc.proto",
-		"lndmobile",
-	}
-
 	f, err := os.Create("./api_generated.go")
 	if err != nil {
 		fmt.Println(err)
@@ -70,6 +48,79 @@ func main() {
 	wr := bufio.NewWriter(f)
 	defer wr.Flush()
 
+	reg.SetPrefix(*importPrefix)
+	reg.SetImportPath(*importPath)
+	reg.SetAllowDeleteBody(*allowDeleteBody)
+	if err := reg.Load(req); err != nil {
+		fmt.Println("err loading: ", err)
+		return
+	}
+
+	// Extract the RPC call godoc from the proto.
+	godoc := make(map[string]string)
+	for _, f := range req.GetProtoFile() {
+		fd := &generator.FileDescriptor{
+			FileDescriptorProto: f,
+		}
+		for _, loc := range fd.GetSourceCodeInfo().GetLocation() {
+			if loc.LeadingComments == nil {
+				continue
+			}
+			c := *loc.LeadingComments
+
+			// Find the first newline. The actual comment will
+			// start following this.
+			i := 0
+			for j := range c {
+				if c[j] == '\n' {
+					i = j
+					break
+				}
+			}
+			c = c[i+1:]
+
+			// Find the first space. The method's name will
+			// be all characters up to that space.
+			i = 0
+			for j := range c {
+				if c[j] == ' ' {
+					i = j
+					break
+				}
+			}
+			method := c[:i]
+
+			// Insert comment // instead of every newline.
+			c = strings.Replace(c, "\n", "\n// ", -1)
+
+			// Add a leading comment // and remove the traling
+			// one.
+			if len(c) < 4 {
+				continue
+			}
+			c = "// " + c[:len(c)-4]
+
+			godoc[method] = c
+		}
+	}
+
+	var targets []*descriptor.File
+	for _, target := range req.FileToGenerate {
+		f, err := reg.LookupFile(target)
+		if err != nil {
+			glog.Fatal(err)
+		}
+
+		targets = append(targets, f)
+	}
+
+	params := struct {
+		Name    string
+		Package string
+	}{
+		"rpc.proto",
+		"lndmobile",
+	}
 	//w := bytes.NewBuffer(nil)
 	if err := headerTemplate.Execute(wr, params); err != nil {
 		fmt.Println(err)
@@ -79,7 +130,6 @@ func main() {
 	var services []*descriptor.Service
 
 	for _, target := range targets {
-		//		wr.WriteString(fmt.Sprintf("name: %s\n", target.GoPkg))
 		for _, s := range target.Services {
 			services = append(services, s)
 		}
@@ -89,7 +139,6 @@ func main() {
 		if s.GetName() != "Lightning" {
 			continue
 		}
-		//		wr.WriteString(fmt.Sprintf("\tservice: %s (%d)\n", s.GetName(), len(s.Methods)))
 		for _, m := range s.Methods {
 			if m.GetName() == "GetInfo" {
 				continue
@@ -101,7 +150,7 @@ func main() {
 				continue
 			}
 
-			//			wr.WriteString(fmt.Sprintf("\tmethod: %s\n", m.GetName()))
+			name := m.GetName()
 			clientStream := false
 			serverStream := false
 			if m.ClientStreaming != nil {
@@ -114,11 +163,10 @@ func main() {
 
 			switch {
 			case !clientStream && !serverStream:
-
-				//wr.WriteString(fmt.Sprintf("creating once handler\n"))
 				p := rpcParams{
 					MethodName:  m.GetName(),
 					RequestType: m.GetInputType()[1:],
+					Comment:     godoc[name],
 				}
 
 				if err := onceTemplate.Execute(wr, p); err != nil {
@@ -129,6 +177,7 @@ func main() {
 				p := rpcParams{
 					MethodName:  m.GetName(),
 					RequestType: m.GetInputType()[1:],
+					Comment:     godoc[name],
 				}
 
 				if err := readStreamTemplate.Execute(wr, p); err != nil {
@@ -139,6 +188,7 @@ func main() {
 				p := rpcParams{
 					MethodName:  m.GetName(),
 					RequestType: m.GetInputType()[1:],
+					Comment:     godoc[name],
 				}
 
 				if err := biStreamTemplate.Execute(wr, p); err != nil {
@@ -153,6 +203,7 @@ func main() {
 type rpcParams struct {
 	MethodName  string
 	RequestType string
+	Comment     string
 }
 
 var (
@@ -170,6 +221,10 @@ import (
 `))
 
 	onceTemplate = template.Must(template.New("once").Parse(`
+{{.Comment}}
+//
+// NOTE: This method produces a single result or error, and the callback
+// will be called only once.
 func {{.MethodName}}(msg []byte, callback Callback) {
 	s := &onceHandler{
 		newProto: func() proto.Message {
@@ -186,6 +241,11 @@ func {{.MethodName}}(msg []byte, callback Callback) {
 `))
 
 	readStreamTemplate = template.Must(template.New("once").Parse(`
+{{.Comment}}
+//
+// NOTE: This method produces a stream of responses, and the callback
+// can be called zero or more times. After EOF error is returned, no
+// more responses will be produced.
 func {{.MethodName}}(msg []byte, callback Callback) {
 	s := &readStreamHandler{
 		newProto: func() proto.Message {
@@ -211,6 +271,12 @@ func {{.MethodName}}(msg []byte, callback Callback) {
 `))
 
 	biStreamTemplate = template.Must(template.New("once").Parse(`
+{{.Comment}}
+//
+// NOTE: This method produces a stream of responses, and the callback
+// can be called zero or more times. After EOF error is returned, no
+// more responses will be produced. The send stream can accept zero
+// or more requests before it is closed.
 func {{.MethodName}}(callback Callback) (SendStream, error) {
 	b := &biStreamHandler{
 		newProto: func() proto.Message {

@@ -55,11 +55,9 @@ func main() {
 	params := struct {
 		Name    string
 		Package string
-		Number  int
 	}{
-		"Johan",
+		"rpc.proto",
 		"lndmobile",
-		111,
 	}
 
 	f, err := os.Create("./api_generated.go")
@@ -118,7 +116,7 @@ func main() {
 			case !clientStream && !serverStream:
 
 				//wr.WriteString(fmt.Sprintf("creating once handler\n"))
-				p := onceParams{
+				p := rpcParams{
 					MethodName:  m.GetName(),
 					RequestType: m.GetInputType()[1:],
 				}
@@ -128,7 +126,7 @@ func main() {
 					return
 				}
 			case !clientStream && serverStream:
-				p := onceParams{
+				p := rpcParams{
 					MethodName:  m.GetName(),
 					RequestType: m.GetInputType()[1:],
 				}
@@ -138,7 +136,7 @@ func main() {
 					return
 				}
 			case clientStream && serverStream:
-				p := onceParams{
+				p := rpcParams{
 					MethodName:  m.GetName(),
 					RequestType: m.GetInputType()[1:],
 				}
@@ -152,7 +150,7 @@ func main() {
 	}
 }
 
-type onceParams struct {
+type rpcParams struct {
 	MethodName  string
 	RequestType string
 }

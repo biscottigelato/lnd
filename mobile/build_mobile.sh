@@ -11,6 +11,7 @@ package="github.com/lightningnetwork/lnd/mobile"
 
 mobile_dir="$dir"
 build_dir="$mobile_dir/build"
+mkdir -p $build_dir
 
 # Generate API bindings.
 api_filename="api_generated.go"

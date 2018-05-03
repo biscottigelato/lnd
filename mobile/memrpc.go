@@ -118,11 +118,17 @@ type onceHandler struct {
 // start executes the RPC call specified by this onceHandler using the
 // specified serialized msg request.
 func (s *onceHandler) start(msg []byte, callback Callback) {
+	// We must make a copy of the passed byte slice, as there is no
+	// guarantee the contents won't be changed while the go routine is
+	// executing.
+	data := make([]byte, len(msg))
+	copy(data[:], msg[:])
+
 	go func() {
 		// Get an empty proto of the desired type, and deserialize msg
 		// as this proto type.
 		req := s.newProto()
-		err := proto.Unmarshal(msg, req)
+		err := proto.Unmarshal(data, req)
 		if err != nil {
 			callback.OnError(err)
 			return
@@ -170,11 +176,17 @@ type readStreamHandler struct {
 // start executes the RPC call specified by this readStreamHandler using the
 // specified serialized msg request.
 func (s *readStreamHandler) start(msg []byte, callback Callback) {
+	// We must make a copy of the passed byte slice, as there is no
+	// guarantee the contents won't be changed while the go routine is
+	// executing.
+	data := make([]byte, len(msg))
+	copy(data[:], msg[:])
+
 	go func() {
 		// Get a new proto of the desired type and deserialize the
 		// passed msg as this type.
 		req := s.newProto()
-		err := proto.Unmarshal(msg, req)
+		err := proto.Unmarshal(data, req)
 		if err != nil {
 			callback.OnError(err)
 			return

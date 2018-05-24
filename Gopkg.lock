@@ -91,9 +91,21 @@
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
 
 [[projects]]
+  name = "github.com/ghodss/yaml"
+  packages = ["."]
+  revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/go-errors/errors"
   packages = ["."]
   revision = "a6af135bd4e28680facf08a3d206b454abc877a4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/golang/glog"
+  packages = ["."]
+  revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
 
 [[projects]]
   name = "github.com/golang/protobuf"
@@ -101,6 +113,9 @@
     "jsonpb",
     "proto",
     "protoc-gen-go/descriptor",
+    "protoc-gen-go/generator",
+    "protoc-gen-go/generator/internal/remap",
+    "protoc-gen-go/plugin",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -112,6 +127,9 @@
 [[projects]]
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
+    "codegenerator",
+    "protoc-gen-grpc-gateway/descriptor",
+    "protoc-gen-grpc-gateway/httprule",
     "runtime",
     "runtime/internal",
     "utilities"
@@ -369,9 +387,15 @@
   packages = ["."]
   revision = "bed2a428da6e56d950bed5b41fcbae3141e5b0d0"
 
+[[projects]]
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2ed41703b28e30218b27aa8a0c218a324e6bc043233558b9c3fd6e9ec2fb1c3b"
+  inputs-digest = "d82af87c4d78d5974954bf7ce310cfea069674e39d004d01355f3dcb296d960b"
   solver-name = "gps-cdcl"
   solver-version = 1
